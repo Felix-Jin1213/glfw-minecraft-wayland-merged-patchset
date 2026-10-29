@@ -2,7 +2,7 @@
 
 [English](README.en.md) | 简体中文
 
-**!重要声明!：本项目完全使用 DeepSeek Harness (dsh) 生成，并且只在我自己的机器上测试过。**
+**! 重要声明 !：本项目完全使用 DeepSeek Harness (dsh) 生成，并且只在我自己的机器上测试过。**
 
 把下面两个面向 Minecraft 的 GLFW Wayland 补丁项目合并成一套可直接应用的补丁：
 
