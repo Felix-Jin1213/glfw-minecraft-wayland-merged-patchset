@@ -1,0 +1,51 @@
+From 3882cbe347b2b98edafb68f1bbed20037a2dcfbf Mon Sep 17 00:00:00 2001
+From: Patch Merge <patch-merge@example.invalid>
+Date: Fri, 30 Oct 2026 00:49:34 +0800
+Subject: [PATCH 8/9] Wayland: Let compositor choose fullscreen output
+
+Passing a wl_output to xdg_toplevel_set_fullscreen can place the window on a stale or unintended monitor when the surface has moved since the monitor was selected. Pass NULL instead so the compositor uses the output where the window currently is.
+
+This merges BoyOrigin/glfw-wayland patch 0007. GLFW monitor targeting on Wayland still depends on the window already being on the desired output; the companion WayFix mod handles multi-monitor targeting for Minecraft.
+---
+ src/wl_window.c | 11 ++++-------
+ 1 file changed, 4 insertions(+), 7 deletions(-)
+
+diff --git a/src/wl_window.c b/src/wl_window.c
+index bd32180d..3a91aac6 100644
+--- a/src/wl_window.c
++++ b/src/wl_window.c
+@@ -673,13 +673,11 @@ static void acquireMonitor(_GLFWwindow* window)
+ {
+     if (window->wl.libdecor.frame)
+     {
+-        libdecor_frame_set_fullscreen(window->wl.libdecor.frame,
+-                                      window->monitor->wl.output);
++        libdecor_frame_set_fullscreen(window->wl.libdecor.frame, NULL);
+     }
+     else if (window->wl.xdg.toplevel)
+     {
+-        xdg_toplevel_set_fullscreen(window->wl.xdg.toplevel,
+-                                    window->monitor->wl.output);
++        xdg_toplevel_set_fullscreen(window->wl.xdg.toplevel, NULL);
+     }
+ 
+     setIdleInhibitor(window, GLFW_TRUE);
+@@ -1043,8 +1041,7 @@ static GLFWbool createLibdecorFrame(_GLFWwindow* window)
+ 
+     if (window->monitor)
+     {
+-        libdecor_frame_set_fullscreen(window->wl.libdecor.frame,
+-                                      window->monitor->wl.output);
++        libdecor_frame_set_fullscreen(window->wl.libdecor.frame, NULL);
+         setIdleInhibitor(window, GLFW_TRUE);
+     }
+     else
+@@ -1136,7 +1133,7 @@ static GLFWbool createXdgShellObjects(_GLFWwindow* window)
+ 
+     if (window->monitor)
+     {
+-        xdg_toplevel_set_fullscreen(window->wl.xdg.toplevel, window->monitor->wl.output);
++        xdg_toplevel_set_fullscreen(window->wl.xdg.toplevel, NULL);
+         setIdleInhibitor(window, GLFW_TRUE);
+     }
+     else

@@ -1,0 +1,33 @@
+From cde62c3ca7d2c108e87058482306a27c66e17fd6 Mon Sep 17 00:00:00 2001
+From: Patch Merge <patch-merge@example.invalid>
+Date: Fri, 30 Oct 2026 00:49:15 +0800
+Subject: [PATCH 6/9] Add GLFW_FORCE_WAYLAND opt-in override
+
+Minecraft 26.1+ calls glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11) unconditionally, which prevents native Wayland even when XDG_SESSION_TYPE=wayland. GLFW_FORCE_WAYLAND=1 now redirects an explicit X11 request to Wayland when WAYLAND_DISPLAY is set. It has no effect otherwise.
+
+This merges jdkeke142/glfw-wayland-minecraft patch 0006.
+---
+ src/platform.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/src/platform.c b/src/platform.c
+index 95b8d0b5..9b0f4efc 100644
+--- a/src/platform.c
++++ b/src/platform.c
+@@ -97,6 +97,16 @@ GLFWbool _glfwSelectPlatform(int desiredID, _GLFWplatform* platform)
+                 desiredID = GLFW_PLATFORM_X11;
+         }
+     }
++
++    // Minecraft 26.1+ requests X11 unconditionally. Allow an explicit opt-in
++    // override when a Wayland display is available; leave every other case
++    // untouched.
++    if (desiredID == GLFW_PLATFORM_X11)
++    {
++        const char* const force = getenv("GLFW_FORCE_WAYLAND");
++        if (force && strcmp(force, "1") == 0 && getenv("WAYLAND_DISPLAY"))
++            desiredID = GLFW_PLATFORM_WAYLAND;
++    }
+ #endif
+ 
+     if (desiredID == GLFW_ANY_PLATFORM)

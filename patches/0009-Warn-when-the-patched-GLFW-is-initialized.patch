@@ -1,0 +1,31 @@
+From b25975b69b3e1cca4f4f0f26272b794c59e25a40 Mon Sep 17 00:00:00 2001
+From: Patch Merge <patch-merge@example.invalid>
+Date: Fri, 30 Oct 2026 00:49:41 +0800
+Subject: [PATCH 9/9] Warn when the patched GLFW is initialized
+
+Make it clear at runtime that this is not stock GLFW, so users reproduce window and rendering issues with upstream GLFW before reporting them to GLFW or mod authors.
+
+This adapts BoyOrigin/glfw-wayland patch 0005 and points at the merged sources rather than the original fork.
+---
+ src/init.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/init.c b/src/init.c
+index 892380e7..969de547 100644
+--- a/src/init.c
++++ b/src/init.c
+@@ -451,6 +451,14 @@ GLFWAPI int glfwInit(void)
+     _glfw.initialized = GLFW_TRUE;
+ 
+     glfwDefaultWindowHints();
++
++    fprintf(stderr,
++            "!!! Patched GLFW: merged Wayland patchset for Minecraft\n"
++            "!!! Based on jdkeke142/glfw-wayland-minecraft and the AUR\n"
++            "!!! glfw-wayland-minecraft-cursorfix patchset.\n"
++            "!!! If window or rendering issues occur, reproduce them with stock\n"
++            "!!! GLFW before reporting them to GLFW or mod authors.\n");
++
+     return GLFW_TRUE;
+ }
+ 

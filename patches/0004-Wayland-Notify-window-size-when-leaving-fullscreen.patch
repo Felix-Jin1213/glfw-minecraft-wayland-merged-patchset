@@ -1,0 +1,28 @@
+From a9e1a567dfbc91a51a8275b395fc06a44690d4f5 Mon Sep 17 00:00:00 2001
+From: Patch Merge <patch-merge@example.invalid>
+Date: Fri, 30 Oct 2026 00:48:12 +0800
+Subject: [PATCH 4/9] Wayland: Notify window size when leaving fullscreen
+
+Exiting fullscreen calls resizeWindow directly, which changes the surface size but never emits the window size callback. Clients such as Minecraft then keep stale fullscreen dimensions and map input to the wrong coordinates.
+
+This merges jdkeke142/glfw-wayland-minecraft patch 0003 and BoyOrigin/glfw-wayland patch 0004, which were equivalent.
+---
+ src/wl_window.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/wl_window.c b/src/wl_window.c
+index f3646617..5cceebba 100644
+--- a/src/wl_window.c
++++ b/src/wl_window.c
+@@ -3075,6 +3075,11 @@ void _glfwSetWindowSizeWayland(_GLFWwindow* window, int width, int height)
+             libdecor_state_free(frameState);
+         }
+ 
++        // Exiting fullscreen resizes the surface without a configure event,
++        // so notify the application explicitly or it will keep stale input
++        // coordinates until the next manual resize.
++        _glfwInputWindowSize(window, width, height);
++
+         if (window->wl.visible)
+             _glfwInputWindowDamage(window);
+     }

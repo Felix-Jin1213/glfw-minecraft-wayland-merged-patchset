@@ -1,0 +1,69 @@
+From 52600dc6970cfa99a6e21d62b13519d708637cfc Mon Sep 17 00:00:00 2001
+From: Patch Merge <patch-merge@example.invalid>
+Date: Fri, 30 Oct 2026 00:47:52 +0800
+Subject: [PATCH 2/9] Wayland: Filter duplicate pointer scroll events
+
+Some compositors, notably GNOME, emit the same pointer axis event twice. Drop only exact consecutive duplicates, tracking each axis separately, so diagonal two-axis scrolling and high-resolution events with changing values are preserved.
+
+This adapts BoyOrigin/glfw-wayland patch 0002. The original timestamp-only check also discarded the second axis of a two-axis event and legitimate same-millisecond scrolling.
+---
+ src/wl_platform.h |  9 +++++++++
+ src/wl_window.c   | 25 +++++++++++++++++++++++++
+ 2 files changed, 34 insertions(+)
+
+diff --git a/src/wl_platform.h b/src/wl_platform.h
+index f4c06577..557adb8a 100644
+--- a/src/wl_platform.h
++++ b/src/wl_platform.h
+@@ -408,6 +408,15 @@ typedef struct _GLFWwindowWayland
+ 
+     double                      cursorPosX, cursorPosY;
+ 
++    // Last scroll event for each axis. Some compositors emit the same axis
++    // event twice; only an identical consecutive event is discarded so that
++    // legitimate high-resolution and two-axis scrolling is preserved.
++    struct {
++        GLFWbool                valid;
++        uint32_t                time;
++        wl_fixed_t              value;
++    } pointerAxis[2];
++
+     char*                       appId;
+ 
+     // We need to track the monitors the window spans on to calculate the
+diff --git a/src/wl_window.c b/src/wl_window.c
+index b1b5419e..50d5fd18 100644
+--- a/src/wl_window.c
++++ b/src/wl_window.c
+@@ -1757,6 +1757,31 @@ static void pointerHandleAxis(void* userData,
+     if (!_glfw.wl.pointerSurface)
+         return;
+ 
++    _GLFWwindow* window = wl_surface_get_user_data(_glfw.wl.pointerSurface);
++
++    int axisIndex = -1;
++    if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL)
++        axisIndex = 0;
++    else if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL)
++        axisIndex = 1;
++
++    if (axisIndex >= 0)
++    {
++        // GNOME has historically sent the same scroll event twice. Filter
++        // exact duplicates only; events at the same timestamp with a
++        // different value (or on the other axis) are still delivered.
++        if (window->wl.pointerAxis[axisIndex].valid &&
++            window->wl.pointerAxis[axisIndex].time == time &&
++            window->wl.pointerAxis[axisIndex].value == value)
++        {
++            return;
++        }
++
++        window->wl.pointerAxis[axisIndex].valid = GLFW_TRUE;
++        window->wl.pointerAxis[axisIndex].time = time;
++        window->wl.pointerAxis[axisIndex].value = value;
++    }
++
+     if (wl_pointer_get_version(pointer) >= WL_POINTER_FRAME_SINCE_VERSION)
+     {
+         _glfw.wl.pending.events |= GLFW_PENDING_SCROLL;

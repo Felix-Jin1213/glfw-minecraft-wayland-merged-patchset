@@ -1,0 +1,113 @@
+From 114449051da3759919289ac4df28c9b240bbdce1 Mon Sep 17 00:00:00 2001
+From: Patch Merge <patch-merge@example.invalid>
+Date: Fri, 30 Oct 2026 00:48:05 +0800
+Subject: [PATCH 3/9] Wayland: Add cursor position fallback
+
+The LWJGL-CI fork implements glfwSetCursorPos with pointer_warp_v1, which requires KDE 6.5+ or GNOME 49+. Fall back to zwp_locked_pointer_v1_set_cursor_position_hint on older compositors, deferring the request until the pointer becomes locked.
+
+Add GLFW_USE_LEGACY_CURSOR_WARP=1 to bypass pointer_warp_v1 on compositors where warps become unreliable after repeated lock/unlock cycles.
+
+This merges jdkeke142/glfw-wayland-minecraft patches 0002 and 0007. It supersedes BoyOrigin/glfw-wayland patch 0003, which implemented only the locked-pointer fallback.
+---
+ src/wl_platform.h |  3 +++
+ src/wl_window.c   | 60 +++++++++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 59 insertions(+), 4 deletions(-)
+
+diff --git a/src/wl_platform.h b/src/wl_platform.h
+index 557adb8a..54129680 100644
+--- a/src/wl_platform.h
++++ b/src/wl_platform.h
+@@ -434,6 +434,9 @@ typedef struct _GLFWwindowWayland
+     struct zwp_locked_pointer_v1*   lockedPointer;
+     struct zwp_confined_pointer_v1* confinedPointer;
+ 
++    double                          askedCursorPosX, askedCursorPosY;
++    GLFWbool                        didAskForSetCursorPos;
++
+     struct zwp_idle_inhibitor_v1*   idleInhibitor;
+     struct xdg_activation_token_v1* activationToken;
+ 
+diff --git a/src/wl_window.c b/src/wl_window.c
+index 50d5fd18..f3646617 100644
+--- a/src/wl_window.c
++++ b/src/wl_window.c
+@@ -3469,16 +3469,56 @@ void _glfwGetCursorPosWayland(_GLFWwindow* window, double* xpos, double* ypos)
+         *ypos = window->wl.cursorPosY;
+ }
+ 
++static GLFWbool useLegacyCursorWarp(void)
++{
++    static int useLegacy = -1;
++
++    if (useLegacy < 0)
++    {
++        const char* env = getenv("GLFW_USE_LEGACY_CURSOR_WARP");
++        useLegacy = (env && strcmp(env, "1") == 0) ? 1 : 0;
++    }
++
++    return useLegacy;
++}
++
+ void _glfwSetCursorPosWayland(_GLFWwindow* window, double x, double y)
+ {
+-    if (!_glfw.wl.pointerWarp)
++    // Prefer pointer_warp_v1 when the compositor supports it. The legacy
++    // locked-pointer path can be forced for compositors where pointer warps
++    // stop working after repeated lock/unlock cycles (notably Hyprland).
++    if (!useLegacyCursorWarp() && _glfw.wl.pointerWarp)
++    {
++        wp_pointer_warp_v1_warp_pointer(_glfw.wl.pointerWarp,
++                                        window->wl.surface,
++                                        _glfw.wl.pointer,
++                                        wl_fixed_from_double(x),
++                                        wl_fixed_from_double(y),
++                                        _glfw.wl.pointerEnterSerial);
++        window->wl.cursorPosX = x;
++        window->wl.cursorPosY = y;
++        window->wl.didAskForSetCursorPos = GLFW_FALSE;
++        return;
++    }
++
++    // Fallback for compositors without pointer_warp_v1: a locked pointer
++    // accepts a position hint. If the pointer is not locked yet, remember
++    // the request and apply it from the locked callback.
++    if (window->wl.lockedPointer)
+     {
+-        _glfwInputError(GLFW_FEATURE_UNAVAILABLE,
+-                    "Wayland: The compositor does not support setting the cursor position");
++        zwp_locked_pointer_v1_set_cursor_position_hint(
++            window->wl.lockedPointer,
++            wl_fixed_from_double(x),
++            wl_fixed_from_double(y));
++        window->wl.cursorPosX = x;
++        window->wl.cursorPosY = y;
++        window->wl.didAskForSetCursorPos = GLFW_FALSE;
+         return;
+     }
+ 
+-    wp_pointer_warp_v1_warp_pointer(_glfw.wl.pointerWarp, window->wl.surface, _glfw.wl.pointer, wl_fixed_from_double(x), wl_fixed_from_double(y), _glfw.wl.pointerEnterSerial);
++    window->wl.didAskForSetCursorPos = GLFW_TRUE;
++    window->wl.askedCursorPosX = x;
++    window->wl.askedCursorPosY = y;
+ }
+ 
+ void _glfwSetCursorModeWayland(_GLFWwindow* window, int mode)
+@@ -3712,6 +3752,18 @@ static const struct zwp_relative_pointer_v1_listener relativePointerListener =
+ static void lockedPointerHandleLocked(void* userData,
+                                       struct zwp_locked_pointer_v1* lockedPointer)
+ {
++    _GLFWwindow* window = userData;
++
++    if (window->wl.didAskForSetCursorPos)
++    {
++        window->wl.didAskForSetCursorPos = GLFW_FALSE;
++        zwp_locked_pointer_v1_set_cursor_position_hint(
++            window->wl.lockedPointer,
++            wl_fixed_from_double(window->wl.askedCursorPosX),
++            wl_fixed_from_double(window->wl.askedCursorPosY));
++        window->wl.cursorPosX = window->wl.askedCursorPosX;
++        window->wl.cursorPosY = window->wl.askedCursorPosY;
++    }
+ }
+ 
+ static void lockedPointerHandleUnlocked(void* userData,

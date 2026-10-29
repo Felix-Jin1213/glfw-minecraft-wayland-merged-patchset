@@ -1,0 +1,55 @@
+From 46d0b261c26b1554cbdb6d34871b7a4b75761dc4 Mon Sep 17 00:00:00 2001
+From: Patch Merge <patch-merge@example.invalid>
+Date: Fri, 30 Oct 2026 00:49:19 +0800
+Subject: [PATCH 7/9] Wayland: Downgrade unsupported window errors
+
+Wayland cannot report or set global window positions, and compositors without xdg-toplevel-icon cannot set a window icon. Raising GLFW_FEATURE_UNAVAILABLE for these expected limitations makes Forge-based launchers abort through their error callback, so report them as warnings instead.
+
+This merges BoyOrigin/glfw-wayland patch 0008 and adapts patch 0006. The current LWJGL-CI base implements glfwSetWindowIcon, but still raises the error when the toplevel-icon manager is unavailable.
+---
+ src/wl_window.c | 19 ++++++++++++-------
+ 1 file changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/src/wl_window.c b/src/wl_window.c
+index d3f51576..bd32180d 100644
+--- a/src/wl_window.c
++++ b/src/wl_window.c
+@@ -3057,9 +3057,12 @@ void _glfwSetWindowIconWayland(_GLFWwindow* window,
+                                int count, const GLFWimage* images)
+ {
+     if (!_glfw.wl.toplevelIconManager)
+-    {   
+-        _glfwInputError(GLFW_FEATURE_UNAVAILABLE,
+-                        "Wayland: The platform does not support setting the window icon");
++    {
++        // Some Minecraft versions set a window icon unconditionally on
++        // startup. Treat a compositor without toplevel-icon as a limitation,
++        // not a fatal error for applications with a strict error callback.
++        fprintf(stderr,
++                "GLFW: Wayland: The platform does not support setting the window icon\n");
+         return;
+     }
+ 
+@@ -3112,16 +3115,18 @@ void _glfwGetWindowPosWayland(_GLFWwindow* window, int* xpos, int* ypos)
+     // A Wayland client is not aware of its position, so just warn and leave it
+     // as (0, 0)
+ 
+-    _glfwInputError(GLFW_FEATURE_UNAVAILABLE,
+-                    "Wayland: The platform does not provide the window position");
++    // Forge installs an error callback that treats every GLFW error as fatal.
++    // This is an informational limitation, not a failure of the request.
++    fprintf(stderr,
++            "GLFW: Wayland: The platform does not provide the window position\n");
+ }
+ 
+ void _glfwSetWindowPosWayland(_GLFWwindow* window, int xpos, int ypos)
+ {
+     // A Wayland client can not set its position, so just warn
+ 
+-    _glfwInputError(GLFW_FEATURE_UNAVAILABLE,
+-                    "Wayland: The platform does not support setting the window position");
++    fprintf(stderr,
++            "GLFW: Wayland: The platform does not support setting the window position\n");
+ }
+ 
+ void _glfwGetWindowSizeWayland(_GLFWwindow* window, int* width, int* height)

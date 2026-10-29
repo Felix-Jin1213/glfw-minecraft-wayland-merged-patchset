@@ -1,0 +1,29 @@
+From 5ba3603c3e14fffde49b21253992abb2911ebd94 Mon Sep 17 00:00:00 2001
+From: Patch Merge <patch-merge@example.invalid>
+Date: Fri, 30 Oct 2026 00:47:44 +0800
+Subject: [PATCH 1/9] Wayland: Ignore text input for shortcut combinations
+
+Ctrl+A and similar combinations currently insert a literal character in addition to triggering the application shortcut. Only deliver _glfwInputChar when neither Ctrl nor Alt is held, matching the key callback semantics.
+
+This merges jdkeke142/glfw-wayland-minecraft patch 0001 and BoyOrigin/glfw-wayland patch 0001; the two changes were equivalent.
+---
+ src/wl_window.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/wl_window.c b/src/wl_window.c
+index 7280f9f8..b1b5419e 100644
+--- a/src/wl_window.c
++++ b/src/wl_window.c
+@@ -1392,7 +1392,11 @@ static void inputText(_GLFWwindow* window, uint32_t scancode)
+         {
+             const int mods = _glfw.wl.xkb.modifiers;
+             const int plain = !(mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT));
+-            _glfwInputChar(window, codepoint, mods, plain);
++
++            // Do not deliver text for shortcut combinations such as Ctrl+A.
++            // The key event still reaches the application via the key callback.
++            if (plain)
++                _glfwInputChar(window, codepoint, mods, plain);
+         }
+     }
+ }
