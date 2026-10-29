@@ -2,6 +2,8 @@
 
 [简体中文](README.md) | English
 
+**!Important Disclaimer!: This project was generated entirely using DeepSeek Harness (dsh) and has only been tested on my own machine.**
+
 This repository merges two Minecraft-oriented GLFW Wayland patch projects into one directly applicable series:
 
 - [jdkeke142/glfw-wayland-minecraft](https://github.com/jdkeke142/glfw-wayland-minecraft) (7 patches)
