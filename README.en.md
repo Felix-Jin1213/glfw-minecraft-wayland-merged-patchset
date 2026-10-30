@@ -157,7 +157,7 @@ NVIDIA proprietary drivers and multi-monitor setups were not available for testi
 
 ## Known issues
 
-- **Input methods do not work**: Fcitx 5 input methods do not work correctly, and the IMBlocker Mod does not work either. The same issue is reproducible on upstream patches; it was not introduced by this merge, and this patchset does not fix it.
+- **Input methods do not work**: Fcitx 5 input methods do not work correctly, and the IMBlocker Mod does not work either. The same issue is reproducible on upstream patchset; it was not introduced by this merge, and this patchset does not fix it.
 
 ## Known trade-offs
 

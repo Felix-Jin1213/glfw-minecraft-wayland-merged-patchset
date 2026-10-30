@@ -196,4 +196,4 @@ Not covered: NVIDIA proprietary drivers and multi-monitor fullscreen transitions
 
 ## Known issue
 
-Under Fcitx 5, input methods do not work correctly, and the IMBlocker Mod does not work either. The same issue exists on upstream GLFW; it was not introduced by this merge, and this patchset does not fix it.
+Under Fcitx 5, input methods do not work correctly, and the IMBlocker Mod does not work either. The same issue exists on upstream patchset; it was not introduced by this merge, and this patchset does not fix it.
