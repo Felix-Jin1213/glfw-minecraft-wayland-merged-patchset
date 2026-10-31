@@ -2,7 +2,7 @@
 
 [English](README.en.md) | 简体中文
 
-**! 重要声明 !：本项目完全使用 DeepSeek Harness (dsh) 生成，并且只在我自己的机器上测试过。**
+**! 重要声明 !：本项目完全使用 DeepSeek Harness (dsh) 生成。**
 
 把下面两个面向 Minecraft 的 GLFW Wayland 补丁项目合并成一套可直接应用的补丁：
 
@@ -153,7 +153,7 @@ undefined reference to `zwp_tablet_tool_v2_interface'
 - **游戏内验证**：Minecraft 1.21.1 + NeoForge、Minecraft 1.20.1 + Forge 均测试通过，补丁覆盖的功能正常。
 - **测试环境**：Mesa 26.2.5、KWin 6.8.1、1.75x 分数缩放。
 
-NVIDIA 专有驱动和多显示器环境没有测试条件，仍需在对应机器上验证。
+NVIDIA 专有驱动需要环境变量 `__GL_THREADED_OPTIMIZATIONS=0` ，并且仍需进一步测试。
 
 ## 已知问题
 

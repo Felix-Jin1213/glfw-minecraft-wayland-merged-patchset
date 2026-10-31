@@ -153,7 +153,7 @@ The patchset therefore keeps `tablet-unstable-v2.xml` and its generated interfac
 - **In-game verification**: Minecraft 1.21.1 + NeoForge and Minecraft 1.20.1 + Forge both pass, with the functionality covered by these patches working normally.
 - **Test environment**: Mesa 26.2.5, KWin 6.8.1, 1.75x fractional scaling.
 
-NVIDIA proprietary drivers and multi-monitor setups were not available for testing and still need validation on such systems.
+NVIDIA proprietary drivers need `__GL_THREADED_OPTIMIZATIONS=0` enviornment variable, and further testing is still needed.
 
 ## Known issues
 
